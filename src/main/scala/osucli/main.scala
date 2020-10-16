@@ -1,7 +1,7 @@
 package osucli
 
 object main extends App {
-  new cli().menu()
+  cli.start()
 }
 /*
   A Scala CLI (Command Line Interface) application.

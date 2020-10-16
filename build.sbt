@@ -9,3 +9,5 @@ libraryDependencies += "org.backuity" % "ansi-interpolator_2.13" % "1.1.0"
 libraryDependencies += "org.scalaj" % "scalaj-http_2.13" % "2.4.2"
 
 libraryDependencies += "net.liftweb" %% "lift-json" % "3.4.2"
+
+libraryDependencies += "org.mongodb.scala" %% "mongo-scala-driver" % "2.9.0"
