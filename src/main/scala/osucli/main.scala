@@ -8,8 +8,8 @@ object main extends App {
   Data should be parsed from a CSV or JSON file and persisted to MongoDB.
 
   - pull data from osu! (the game) and persist to mongodb
-    - requests (getuser, getuserstats, map stats)
-    - hide credentials (from repo)
+    -- requests (getuser, getuserstats, map stats) --
+    -- hide credentials (from repo) --
     - compare to other users
     - top 10
     - stat analysis

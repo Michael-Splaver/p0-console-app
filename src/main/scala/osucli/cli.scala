@@ -1,5 +1,7 @@
 package osucli
 
+import java.util.logging.{Logger,Level}
+
 import scala.io.StdIn
 import scala.util.matching.Regex
 import org.backuity.ansi.AnsiFormatter.FormattedHelper
@@ -21,12 +23,18 @@ object cli {
     println(ansi"%yellow{type help for a list of commands.}")
   }
 
+  def setLoggingLevel(level: Level): Unit = {
+    val root = Logger.getLogger("")
+    root.setLevel(level)
+  }
+
   val commandsList = Map(
     "exit" -> "exit the osu!cli application",
     "help" -> "get the list of commands or specific command information"
   )
 
   def start(): Unit = {
+    setLoggingLevel(Level.WARNING)
     welcomeMessage()
     while(continueMenuLoop){
       StdIn.readLine() match {
@@ -37,7 +45,7 @@ object cli {
           command match {
             case "help" => help(args)
             case "exit" => exit()
-            case "create" => createNewUser()
+            case "add" => addUser(args)
             case notFound => println(ansi"%red{%bold{$notFound} is not a recognized command.}")
           }
         case "" => //empty line -> do nothing
@@ -73,17 +81,40 @@ object cli {
 
   //this should be broken up and handled somewhere else
   implicit val formats = DefaultFormats
-  def createNewUser() : Unit = {
+  def addUser(args: Array[String]) : Unit = {
 
-    val userJson = request.getUserFromAPI("mikacutie")
-    val userBestJson = request.getUserBestFromAPI("mikacutie")
+    if (args.length != 1) {
+      println(ansi"%red{Incorrect Number of arguments! Use} %yellow{add [username]}")
+      return
+    }
+
+    val username = args(0)
+    val userJson = request.getUserFromAPI(username)
+
+    if(userJson.extract[List[JObject]].isEmpty){
+      println(ansi"%red{Not a valid username! Use} %yellow{add [username]}")
+      return
+    }
+
+    val userBestJson = request.getUserBestFromAPI(username)
 
     val topTenPlaysList = (userBestJson).extract[List[JObject]]
 
     var topTenPlays : Set[play] = Set.empty
     for (x <- topTenPlaysList.indices){
-      //request.getBeatmapFromAPI((topTenPlaysList(x)\"beatmap_id").extract[String].toInt)
+      val newBeatmapJson = request.getBeatmapFromAPI((topTenPlaysList(x)\"beatmap_id").extract[String].toInt)
+
+      val newBeatmap : beatmap = beatmap(
+        (newBeatmapJson\"title").extract[String],
+        (newBeatmapJson\"artist").extract[String],
+        (newBeatmapJson\"difficultyrating").extract[String].toDouble,
+        (newBeatmapJson\"max_combo").extract[String].toInt,
+      )
+
+      mongo.createBeatmap(newBeatmap)
+
       topTenPlays += play(
+        newBeatmap._id,
         (topTenPlaysList(x)\"maxcombo").extract[String].toInt,
         (topTenPlaysList(x)\"rank").extract[String],
         (topTenPlaysList(x)\"pp").extract[String].toDouble
