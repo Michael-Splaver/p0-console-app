@@ -1,4 +1,4 @@
-package osucli
+package osucli.models
 
 import org.bson.types.ObjectId
 
@@ -29,8 +29,19 @@ object user{
 
 case class play(_id: ObjectId, beatmap_id: ObjectId, maxComboReached: Int, rank: String, performancePoints: Double)
 
-object play{
+object play {
   def apply(beatmap_id: ObjectId, maxComboReached: Int, rank: String, performancePoints: Double): play = {
     new play(new ObjectId(), beatmap_id, maxComboReached, rank, performancePoints)
+  }
+  def apply(playBeatmap: playBeatmap): play = {
+    new play(new ObjectId(), playBeatmap.beatmap._id, playBeatmap.maxComboReached, playBeatmap.rank, playBeatmap.performancePoints)
+  }
+}
+
+case class playBeatmap(beatmap: beatmap, maxComboReached: Int, rank: String, performancePoints: Double)
+
+object playBeatmap{
+  def apply(beatmap: beatmap, maxComboReached: Int, rank: String, performancePoints: Double): playBeatmap = {
+    new playBeatmap(beatmap, maxComboReached, rank, performancePoints)
   }
 }

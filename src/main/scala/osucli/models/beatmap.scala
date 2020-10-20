@@ -1,4 +1,4 @@
-package osucli
+package osucli.models
 
 import org.bson.types.ObjectId
 

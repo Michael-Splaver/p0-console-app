@@ -1,6 +1,6 @@
 package osucli
 
-import java.util.logging.{Logger,Level}
+import java.util.logging.{Level, Logger}
 
 import scala.io.StdIn
 import scala.util.matching.Regex
@@ -13,10 +13,18 @@ import net.liftweb.json._
 import scala.collection.mutable
 import scala.concurrent.Await
 import scala.concurrent.duration.{Duration, SECONDS}
+import osucli.util.jsonUtil._
+import osucli.util.{mongo, request}
 
 object cli {
-  private var continueMenuLoop = true
+  private var continueMenuLoop : Boolean = true
   private val commandArgPattern : Regex = "(\\w+)\\s*(.*)".r   //cmd, (args0,args1,args2,...)
+  private var mongo: mongo = null
+
+  def init() : Unit = {
+    setLoggingLevel(Level.WARNING)
+    mongo = new mongo
+  }
 
   def welcomeMessage() : Unit = {
     println(ansi"%bold{%magenta{✧･ﾟ: *✧･ﾟ:* %underline{Welcome to osu!cli} *:･ﾟ✧*:･ﾟ✧}}")
@@ -24,17 +32,18 @@ object cli {
   }
 
   def setLoggingLevel(level: Level): Unit = {
-    val root = Logger.getLogger("")
-    root.setLevel(level)
+    val logger = Logger.getLogger("")
+    logger.setLevel(level)
   }
 
   val commandsList = Map(
     "exit" -> "exit the osu!cli application",
-    "help" -> "get the list of commands or specific command information"
+    "help" -> "get the list of commands or specific command information",
+    "add" -> "add a user to the application"
   )
 
   def start(): Unit = {
-    setLoggingLevel(Level.WARNING)
+    init()
     welcomeMessage()
     while(continueMenuLoop){
       StdIn.readLine() match {
@@ -46,6 +55,7 @@ object cli {
             case "help" => help(args)
             case "exit" => exit()
             case "add" => addUser(args)
+            case "bool" => println(getPromptedBooleanInput("Would you like to play a game..?"))
             case notFound => println(ansi"%red{%bold{$notFound} is not a recognized command.}")
           }
         case "" => //empty line -> do nothing
@@ -53,6 +63,27 @@ object cli {
         => println(ansi"%red{%bold{$notRecognized} is not a recognized command format, use [command] <args>}")
       }
     }
+  }
+
+  def getPromptedBooleanInput(prompt: String) : Boolean = {
+    var bool = false
+    var continueInputLoop = true
+
+    println(s"$prompt Please enter (Y/N)")
+    while (continueInputLoop) {
+      StdIn.readLine().toLowerCase match {
+        case "y" => {
+          bool = true
+          continueInputLoop = false
+        }
+        case "n" => {
+          bool = false
+          continueInputLoop = false
+        }
+        case _ => println("Invalid input, please enter Y for yes or N for no.")
+      }
+    }
+    return bool
   }
 
   def exit() : Unit = {
@@ -80,7 +111,7 @@ object cli {
   }
 
   //this should be broken up and handled somewhere else
-  implicit val formats = DefaultFormats
+
   def addUser(args: Array[String]) : Unit = {
 
     if (args.length != 1) {
@@ -89,48 +120,20 @@ object cli {
     }
 
     val username = args(0)
-    val userJson = request.getUserFromAPI(username)
+    val userJson = parseJson(request.getUserFromAPI(username))
+    val userBestJson = parseJson(request.getUserBestFromAPI(username))
 
-    if(userJson.extract[List[JObject]].isEmpty){
+    if(checkIfEmpty(userJson)){
       println(ansi"%red{Not a valid username! Use} %yellow{add [username]}")
       return
     }
 
-    val userBestJson = request.getUserBestFromAPI(username)
+    val userBestPlaysWithBeatmap = buildBestPlaysSetWithBeatmap(userBestJson)
 
-    val topTenPlaysList = (userBestJson).extract[List[JObject]]
+    userBestPlaysWithBeatmap.foreach(x => mongo.addUpdateBeatmap(x.beatmap))
 
-    var topTenPlays : Set[play] = Set.empty
-    for (x <- topTenPlaysList.indices){
-      val newBeatmapJson = request.getBeatmapFromAPI((topTenPlaysList(x)\"beatmap_id").extract[String].toInt)
+    val newUser = buildUser(userJson,buildPlaysWithPlaysBeatmap(userBestPlaysWithBeatmap))
 
-      val newBeatmap : beatmap = beatmap(
-        (newBeatmapJson\"title").extract[String],
-        (newBeatmapJson\"artist").extract[String],
-        (newBeatmapJson\"difficultyrating").extract[String].toDouble,
-        (newBeatmapJson\"max_combo").extract[String].toInt,
-      )
-
-      mongo.createBeatmap(newBeatmap)
-
-      topTenPlays += play(
-        newBeatmap._id,
-        (topTenPlaysList(x)\"maxcombo").extract[String].toInt,
-        (topTenPlaysList(x)\"rank").extract[String],
-        (topTenPlaysList(x)\"pp").extract[String].toDouble
-      )
-    }
-
-    val userName = (userJson\"username").extract[String]
-    val playCount = (userJson\"playcount").extract[String].toInt
-    val rank = (userJson\"pp_rank").extract[String].toInt
-    val performancePoints = (userJson\"pp_raw").extract[String].toDouble
-    val accuracy = (userJson\"accuracy").extract[String].toDouble
-    val secondsPlayed = (userJson\"total_seconds_played").extract[String].toInt
-
-    val newUser : user = user(
-      userName, playCount, rank, performancePoints, accuracy, secondsPlayed, topTenPlays
-    )
-    mongo.createUser(newUser)
+    mongo.addUpdateUser(newUser)
   }
 }
