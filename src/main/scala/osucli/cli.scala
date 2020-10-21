@@ -47,11 +47,11 @@ object cli {
     "exit" -> "exit the osu!cli application",
     "help" -> "get the list of commands or specific command information",
     "add" -> "add an osu user to the application",
-    "update" -> "update an osu user to the application",
+    "delete" -> "delete a user from the application",
     "list" -> "list the users in the application",
-    "leaderboard" -> "display the top 10 rated users in the application",
-    "info" -> "display the information of a user"
-
+    "leaderboard" -> "display the top rated users in the application",
+    "info" -> "display the information of a user",
+    "topten" -> "display the top 10 plays of a user in the application"
   )
 
   def start(): Unit = {
@@ -67,11 +67,12 @@ object cli {
             case "help" => help(args)
             case "exit" => exit()
             case "add" => add(args)
-            case "update" => add(args)
+            case "delete" => delete(args)
             case "info" => info(args)
             case "list" => list()
             case "leaderboard" => leaderboard()
-            case "bool" => println(getPromptedBooleanInput("would you like to play a game..?"))
+            case "topten" => topten(args)
+            //case "bool" => println(getPromptedBooleanInput("would you like to play a game..?"))
             case notFound => println(ansi"%red{%bold{$notFound} is not a recognized command.}")
           }
         case "" => //empty line -> do nothing
@@ -126,8 +127,30 @@ object cli {
     }
   }
 
+  def topten(args: Array[String]) : Unit = {
+    if (args.length != 1) {
+      println(ansi"%red{incorrect Number of arguments! Use} %yellow{topten [username]}")
+      return
+    }
+    val username = args(0)
+    val userOptional = mongo.getUserByUsername(username)
+    if (userOptional.isEmpty) {
+      println(ansi"%red{couldn't find that user in the application!} %yellow{you may need to add the user}")
+      return
+    }
+    val userTopTen = userOptional.get.topTenPlays.toList.sortWith(_.performancePoints > _.performancePoints)
+    for (x <- 1 to userTopTen.size){
+      val beatmap = mongo.getBeatmap(userTopTen(x-1).beatmap_id.toString).get
+      println(ansi"%yellow{%bold{$x}: %bold{${beatmap.title}} by ${beatmap.artist} (${beatmap.difficulty} ★) Combo: (${userTopTen(x-1).maxComboReached}/${beatmap.maxComboAvailable}), Performance Points: ${userTopTen(x-1).performancePoints}}")
+    }
+  }
+
   def leaderboard() : Unit = {
-    
+    println(ansi"%yellow{%bold{leaderboard:}}")
+    val users = mongo.getAllUsers().toList.sortWith(_.rank < _.rank)
+    for (x <- 1 to users.size){
+      println(ansi"%yellow{%bold{$x}: ${users(x-1).userName} (${users(x-1).rank})}")
+    }
   }
 
   def info(args: Array[String]) : Unit = {
@@ -165,7 +188,7 @@ object cli {
   def add(args: Array[String]) : Unit = {
     //return if not 1 argument
     if (args.length != 1) {
-      println(ansi"%red{incorrect Number of arguments! Use} %yellow{add [username]} %red{or} %yellow{update [username]}")
+      println(ansi"%red{incorrect Number of arguments! Use} %yellow{add [username]}")
       return
     }
     val username = args(0)
@@ -181,11 +204,22 @@ object cli {
     //build the best plays objects with beatmaps
     val userBestPlaysWithBeatmap = buildBestPlaysSetWithBeatmap(userBestJson)
     //add or update all of the beatmaps from the best plays into the mongoDB
-    userBestPlaysWithBeatmap.foreach(x => mongo.addUpdateBeatmap(x.beatmap))
+    userBestPlaysWithBeatmap.foreach(x => mongo.addBeatmap(x.beatmap))
     //build the user object with the user information and the best plays information embedded
     val newUser = buildUser(userJson,buildPlaysWithPlaysBeatmap(userBestPlaysWithBeatmap))
     //add or update user to mongoDB
-    mongo.addUpdateUser(newUser)
+    mongo.addUser(newUser)
     println(ansi"%yellow{user %bold{$username} successfully added!}")
+  }
+
+  def delete(args: Array[String]) : Unit = {
+    //return if not 1 argument
+    if (args.length != 1) {
+      println(ansi"%red{incorrect Number of arguments! Use} %yellow{delete [username]}")
+      return
+    }
+    val username = args(0)
+    mongo.deleteUser(username)
+    println(ansi"%yellow{user %bold{$username} successfully deleted!}")
   }
 }

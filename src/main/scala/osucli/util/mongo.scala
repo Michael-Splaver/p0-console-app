@@ -21,12 +21,19 @@ class mongo () {
     Await.result(obs.toFuture(), Duration(10,SECONDS))
   }*/
 
-  /**Adds the user to mongoDB or updates user*/
-  def addUpdateUser(user: user) : Unit = {
+  def addUser(user: user) : Unit = {
     //check if user exists
     //userDAO
     val dao = new userDAO(getMongoCollection("user"))
     dao.createUser(user)
+  }
+
+  def deleteUser(username: String): Unit = {
+    val topten = getUserByUsername(username).get.topTenPlays.toList
+    topten.foreach(x => deleteBeatmap(x.beatmap_id.toString))
+
+    val dao = new userDAO(getMongoCollection("user"))
+    dao.deleteUser(username)
   }
 
   def getAllUsers() : Seq[user] = {
@@ -44,8 +51,14 @@ class mongo () {
     dao.getBeatmap(beatmap_id)
   }
 
-  def addUpdateBeatmap(beatmap: beatmap) : Unit = {
+  def deleteBeatmap(beatmap_id: String) : Unit = {
     val dao = new beatmapDAO(getMongoCollection("beatmap"))
+    dao.deleteBeatmap(beatmap_id)
+  }
+
+  def addBeatmap(beatmap: beatmap) : Unit = {
+    val dao = new beatmapDAO(getMongoCollection("beatmap"))
+
     dao.createBeatmap(beatmap)
   }
 }

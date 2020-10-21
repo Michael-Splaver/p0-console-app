@@ -24,7 +24,15 @@ class beatmapDAO (collection: MongoCollection[beatmap]){
     Await.result(collection.insertOne(beatmap).toFuture(), Duration(10,SECONDS))
   }
 
+  def deleteBeatmap (beatmap_id: String): Unit = {
+    Await.result(collection.findOneAndDelete(equal("_id", new ObjectId(beatmap_id))).toFuture(), Duration(10,SECONDS))
+  }
+
   def getBeatmap (beatmap_id: String) : Option[beatmap] = {
     getResults(collection.find(equal("_id", new ObjectId(beatmap_id)))).headOption
+  }
+
+  def getBeatmap (beatmap: beatmap) : Option[beatmap] = {
+    getResults(collection.find(and(equal("title", beatmap.title),equal("difficulty", beatmap.difficulty)))).headOption
   }
 }

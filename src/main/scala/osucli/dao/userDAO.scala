@@ -1,5 +1,6 @@
 package osucli.dao
 
+import org.bson.types.ObjectId
 import org.mongodb.scala.{MongoCollection, Observable}
 import org.mongodb.scala.model.Filters._
 import osucli.models.user
@@ -22,8 +23,9 @@ class userDAO (collection: MongoCollection[user]){
   def createUser (user: user): Unit = {
     Await.result(collection.insertOne(user).toFuture(), Duration(10,SECONDS))
   }
-  //def deleteUser () : user = {}
-  //def updateUser () : user = {}
+  def deleteUser (username: String) : Unit = {
+    Await.result(collection.findOneAndDelete(equal("userName", username)).toFuture(), Duration(10,SECONDS))
+  }
   def getUser (username: String) : Option[user] = {
     //printResults(collection.find(equal("userName", username)))
     Await.result(collection.find(equal("userName", username)).toFuture(), Duration(10,SECONDS)).headOption
