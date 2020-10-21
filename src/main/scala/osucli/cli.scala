@@ -1,18 +1,9 @@
 package osucli
 
 import java.util.logging.{Level, Logger}
-
 import scala.io.StdIn
 import scala.util.matching.Regex
 import org.backuity.ansi.AnsiFormatter.FormattedHelper
-
-import scala.util.{Try, Using}
-import scala.io.Source
-import net.liftweb.json._
-
-import scala.collection.mutable
-import scala.concurrent.Await
-import scala.concurrent.duration.{Duration, SECONDS}
 import osucli.util.jsonUtil._
 import osucli.util.{mongo, request}
 

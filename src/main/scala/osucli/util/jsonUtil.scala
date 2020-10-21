@@ -51,7 +51,6 @@ object jsonUtil {
 
   def buildPlaysWithPlaysBeatmap(playsWithBM: Set[playBeatmap]): Set[play] = {
     var plays: Set[play] = Set.empty
-    //playsWithBM.toList.foreach(play(_))
     playsWithBM.foreach(plays += models.play(_))
     return plays
   }

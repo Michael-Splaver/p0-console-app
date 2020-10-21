@@ -5,7 +5,6 @@ import org.mongodb.scala.bson.codecs.Macros._
 import org.mongodb.scala.{MongoClient, MongoCollection, MongoDatabase}
 import osucli.dao.{beatmapDAO, userDAO}
 import osucli.models.{beatmap, play, user}
-
 import scala.reflect.ClassTag
 
 class mongo () {
@@ -17,13 +16,7 @@ class mongo () {
     db.getCollection(collectionName)
   }
 
-  /*def getResult[T](obs: Observable[T]): Seq[T] = {
-    Await.result(obs.toFuture(), Duration(10,SECONDS))
-  }*/
-
   def addUser(user: user) : Unit = {
-    //check if user exists
-    //userDAO
     val dao = new userDAO(getMongoCollection("user"))
     dao.createUser(user)
   }
@@ -58,7 +51,6 @@ class mongo () {
 
   def addBeatmap(beatmap: beatmap) : Unit = {
     val dao = new beatmapDAO(getMongoCollection("beatmap"))
-
     dao.createBeatmap(beatmap)
   }
 }
