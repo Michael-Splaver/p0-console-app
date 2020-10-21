@@ -9,7 +9,7 @@ import osucli.models.{beatmap, play, user}
 import scala.reflect.ClassTag
 
 class mongo () {
-  private val codecRegistry = fromRegistries(fromProviders(classOf[user]), fromProviders(classOf[play]), fromProviders(classOf[beatmap]), MongoClient.DEFAULT_CODEC_REGISTRY)
+  private val codecRegistry = fromRegistries(fromProviders(classOf[user], classOf[play], classOf[beatmap]), MongoClient.DEFAULT_CODEC_REGISTRY)
   private val client: MongoClient = MongoClient()
   private val db: MongoDatabase = client.getDatabase("osucli_db").withCodecRegistry(codecRegistry)
 
@@ -27,6 +27,21 @@ class mongo () {
     //userDAO
     val dao = new userDAO(getMongoCollection("user"))
     dao.createUser(user)
+  }
+
+  def getAllUsers() : Seq[user] = {
+    val dao = new userDAO(getMongoCollection("user"))
+    dao.getUsers()
+  }
+
+  def getUserByUsername(username: String) : Option[user] = {
+    val dao = new userDAO(getMongoCollection("user"))
+    dao.getUser(username)
+  }
+
+  def getBeatmap(beatmap_id: String) : Option[beatmap] = {
+    val dao = new beatmapDAO(getMongoCollection("beatmap"))
+    dao.getBeatmap(beatmap_id)
   }
 
   def addUpdateBeatmap(beatmap: beatmap) : Unit = {
